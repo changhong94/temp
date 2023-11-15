@@ -49,7 +49,7 @@ build:  # create the build/ directory if it doesn't exist
 
 $(BINARY): $(OBJS) | build
 	@echo -e "\033[34m----> Linking $@ \033[0m"
-	$(LD) $(LDFLAGS) $(DLIBS) -o $@ $^ $(SLIBS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(SLIBS) $(DLIBS)
 
 $(BUILD_DIR)/%.d: $(SRC_DIR)/%.c | build
 	@echo -e "\033[32m----> Generate dependency file for $<\033[0m"

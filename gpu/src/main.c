@@ -246,7 +246,8 @@ int cricket_restore(int argc, char *argv[])
     LOGE(LOG_DEBUG, "got CUDA debugging API");
 
     // We currently only support a single GPU
-    uint32_t numDev = 0;
+    uint32_t numDev;
+    numDev = 0;
     if (!cricket_device_get_num(cudbgAPI, &numDev)) {
         LOGE(LOG_ERROR, "error getting device num");
         goto detach;
@@ -294,12 +295,16 @@ int cricket_restore(int argc, char *argv[])
     uint64_t relative_ssy;
     uint64_t jmptbl_address;
     const char *fn;
-    uint32_t predicate = 1;
-    uint64_t cur_address = 0;
-    uint64_t start_address = 0;
+    uint32_t predicate;
+    predicate = 1;
+    uint64_t cur_address;
+    cur_address = 0;
+    uint64_t start_address;
+    start_address = 0;
     uint64_t jmptable_addr;
     uint64_t rb_address;
-    bool found_callstack = false;
+    bool found_callstack;
+    found_callstack = false;
 
     // We first need to navigate the jumptable in the kernel entry
     // function.
@@ -804,7 +809,7 @@ cuda_error:
 
 int cricket_checkpoint(int argc, char *argv[])
 {
-    char *ckp_dir = "/tmp/cricket-ckp";
+    const char *ckp_dir = "/tmp/cricket-ckp";
     uint32_t numDev = 0;
     const char *kernel_name = NULL;
     const char *warp_kn;
@@ -875,7 +880,7 @@ int cricket_checkpoint(int argc, char *argv[])
     }
     cricket_device_print_prop(&dev_prop);
 
-    warp_mask = malloc(sizeof(uint64_t) * dev_prop.numSMs);
+    warp_mask = (uint64_t*)malloc(sizeof(uint64_t) * dev_prop.numSMs);
 
     res = cudbgAPI->readValidWarps(0, 0, warp_mask);
     if (res != CUDBG_SUCCESS) {
@@ -912,7 +917,8 @@ int cricket_checkpoint(int argc, char *argv[])
            elf_info.stack_size, elf_info.param_addr, elf_info.param_size,
            elf_info.param_num);
 
-    cricketWarpInfo warp_info = { 0 };
+    cricketWarpInfo warp_info;
+    warp_info = { 0 };
     warp_info.dev = 0;
     warp_info.dev_prop = &dev_prop;
     warp_info.sm = 0;
@@ -943,11 +949,15 @@ int cricket_checkpoint(int argc, char *argv[])
                     goto detach;
                 }
                 if (strcmp(warp_kn, kernel_name) != 0) {
+                    fprintf(stderr, "Only one kernel can be checkpointed");
+                    // change to avoid compilation error, following statement missing arguments anyway.
+                    /**
                     // TODO: here are some arguments missing
                     fprintf(stderr,
                             "cricket-checkpoint: found kernel \"%s\" while "
                             "checkpointing kernel \"%s\". only one kernel can "
                             "be checkpointed\n");
+                    **/
                     goto detach;
                 }
 

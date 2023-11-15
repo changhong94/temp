@@ -20,7 +20,6 @@ build/
 cricket
 bin
 *.test
-submodules/cuda-gdb
 submodules/lib
 ckp
 .nfs*
