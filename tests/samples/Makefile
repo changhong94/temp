@@ -9,7 +9,7 @@ SAMPLES = samples-bin/matrixMul.compressed.sample \
 		  samples-bin/mnistCUDNN.sample
 
 CUDA_PATH = /usr/local/cuda
-SMS = 75 60
+SMS = 86
 CUDA_SAMPLES_RELEASE ?= 12.1
 CUDA_SAMPLES_URL = https://github.com/NVIDIA/cuda-samples/archive/refs/tags/v${CUDA_SAMPLES_RELEASE}.tar.gz
 CUDNN_SAMPLES_URL = https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/libcudnn8-samples-8.9.2.26-1.cuda12.1.x86_64.rpm
