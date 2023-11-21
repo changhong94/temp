@@ -626,6 +626,9 @@ static char* get_kernel_section_from_kernel_name(const char *kernel_name)
         return NULL;
     }
 
+    // In CUDA 12, device function are automatically inlined, except explicitly declare __noinline__, 
+    // just like intrinsic, not sure order version nvcc. So intrinsic start with '$'.
+    // so following if branch might be useless?
     if (kernel_name[0] == '$') {
         const char *p;
         if ((p = strchr(kernel_name+1, '$')) == NULL) {
@@ -954,6 +957,9 @@ int elf2_parameter_info(list *kernel_infos, void* memory, size_t memsize)
             LOGE(LOG_ERROR, "gelf_getsym failed for entry %d", entry->kernel_id);
             continue;
         }
+        // printf("---------------------");
+        // print_symtab(elf);
+        // printf("---------------------");
         if ((kernel_str = elf_strptr(elf, symtab_shdr.sh_link, sym.st_name) ) == NULL) {
             LOGE(LOG_ERROR, "strptr failed for entry %d", entry->kernel_id);
             continue;
@@ -980,9 +986,12 @@ int elf2_parameter_info(list *kernel_infos, void* memory, size_t memsize)
             goto cleanup;
         }
 
-        if (get_parm_for_kernel(elf, ki, memory, memsize) != 0) {
-            LOGE(LOG_ERROR, "get_parm_for_kernel failed for kernel %s", kernel_str);
-            goto cleanup;
+        // not sure if it's reasonable.
+        if((ki->name)[0]!='$'){
+            if (get_parm_for_kernel(elf, ki, memory, memsize) != 0) {
+                LOGE(LOG_ERROR, "get_parm_for_kernel failed for kernel %s", kernel_str);
+                goto cleanup;
+            }
         }
     }
 
