@@ -403,10 +403,11 @@ static int cr_dump_memory_entry(const char *path, api_record_t *record)
         return 0;
     }
 
-    if ( (ret = cudaMemcpy(mem_data,
+    ret = cudaMemcpy(mem_data,
            (void*)result.ptr_result_u.ptr,
            mem_size,
-           cudaMemcpyDeviceToHost)) != 0) {
+           cudaMemcpyDeviceToHost);
+    if ( ret != 0) {
         LOGE(LOG_ERROR, "cudaMalloc returned an error: %s", cudaGetErrorString(ret));
         return 0;
     }
