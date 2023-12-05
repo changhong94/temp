@@ -281,14 +281,14 @@ void cricket_main(size_t prog_num, size_t vers_num)
         goto cleanup4;
     }
 
-    if (server_runtime_init(restore) != 0) {
-        LOGE(LOG_ERROR, "initializing server_runtime failed.");
-        goto cleanup3;
-    }
-
     if (server_driver_init(restore) != 0) {
         LOGE(LOG_ERROR, "initializing server_runtime failed.");
         goto cleanup2;        
+    }
+    
+    if (server_runtime_init(restore) != 0) {
+        LOGE(LOG_ERROR, "initializing server_runtime failed.");
+        goto cleanup3;
     }
     
     if (server_nvml_init(restore) != 0) {

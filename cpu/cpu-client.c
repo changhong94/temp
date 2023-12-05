@@ -207,6 +207,11 @@ void __attribute__((destructor)) deinit_rpc(void)
 {
     enum clnt_stat retval_1;
     int result;
+#ifdef CKPT
+    printf("rpc checkpoint start\n");
+    retval_1 = rpc_checkpoint_1(&result, clnt);
+    printf("rpc checkpoint finished\n");
+#endif 
     if (initialized) {
         retval_1 = rpc_deinit_1(&result, clnt);
         if (retval_1 != RPC_SUCCESS) {
@@ -333,8 +338,9 @@ void __cudaRegisterFunction(void **fatCubinHandle, const char *hostFun,
     } else {
         LOGE(LOG_DEBUG, "request to register known function: \"%s\"",
              deviceName);
+        int name_len = strlen(deviceName);
         retval_1 = rpc_register_function_1((ptr)fatCubinHandle, (ptr)hostFun,
-                                           deviceFun, (char*)deviceName, thread_limit,
+                                           deviceFun, (char*)deviceName, thread_limit, name_len,
                                            &result, clnt);
         if (retval_1 != RPC_SUCCESS) {
             LOGE(LOG_ERROR, "call failed.");

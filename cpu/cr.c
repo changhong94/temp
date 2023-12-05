@@ -403,10 +403,15 @@ static int cr_dump_memory_entry(const char *path, api_record_t *record)
         return 0;
     }
 
+    // here we might get error, because restored record are also recorded, but address already mapped
     ret = cudaMemcpy(mem_data,
            (void*)result.ptr_result_u.ptr,
            mem_size,
            cudaMemcpyDeviceToHost);
+    // ret = cudaMemcpy(mem_data,
+    //        resource_mg_get(&rm_memory, (void*)result.ptr_result_u.ptr),
+    //        mem_size,
+    //        cudaMemcpyDeviceToHost);
     if ( ret != 0) {
         LOGE(LOG_ERROR, "cudaMalloc returned an error: %s", cudaGetErrorString(ret));
         return 0;
@@ -696,6 +701,144 @@ cleanup:
     return res;
 }
 
+#include <cuda.h>
+static int cr_restore_fatbinary(const char *path, api_record_t *record, resource_mg *rm_modules) 
+{
+    FILE *fp = NULL;
+    char *file_name;
+    const char *suffix = "elf";
+    mem_data elf;
+    void *elf_ptr;
+    int ret = 1;
+    CUresult res;
+    CUmodule module = NULL;
+
+    rpc_elf_load_1_argument *arg = ((rpc_elf_load_1_argument*)record->arguments);
+    elf = arg->arg1;
+
+    if ( (elf_ptr = malloc(elf.mem_data_len)) == NULL) {
+        LOGE(LOG_ERROR, "could not allocate memory");
+        return 1;
+    }
+
+    if (asprintf(&file_name, "%s/%s-0x%lx",
+                 path, suffix, elf.mem_data_val) < 0) {
+        LOGE(LOG_ERROR, "memory allocation failed");
+        goto out;
+    }
+
+    if ((fp = fopen(file_name, "rb")) != NULL) {
+
+        if (ferror(fp) || feof(fp)) {
+            LOGE(LOG_ERROR, "file descriptor is invalid");
+            goto cleanup;
+            return 1;
+        }
+
+        if (fread(elf_ptr,
+                   1, elf.mem_data_len, fp) != elf.mem_data_len) {
+            LOGE(LOG_ERROR, "error reading elf.mem_data");
+            goto cleanup;
+        }
+    } else {
+        LOGE(LOG_WARNING, "could not open memory file: %s", file_name);
+        goto out;
+    }
+    res = cuModuleLoadData(&module, elf_ptr);
+    if (res != CUDA_SUCCESS) {
+        LOGE(LOG_ERROR, "cuModuleLoadData failed: %d", res);
+        goto out;
+    }
+    LOG(LOG_DEBUG, "restored mapping %p -> %p", 
+                                (void*)arg->arg2, 
+                                (void*)module);
+    // fatCubinHandle(module_key) to new module mapping
+    if ((res = resource_mg_add_sorted(rm_modules, (void*)arg->arg2, (void*)module)) != CUDA_SUCCESS) {
+        LOGE(LOG_ERROR, "resource_mg_create failed: %d", res);
+        goto out;
+    }
+    LOG(LOG_DEBUG, "restored elf of size %zu from %s", elf.mem_data_len, file_name);
+    ret = 0;
+
+cleanup:
+    free(file_name);
+    fclose(fp);
+out:
+    return ret;
+}
+
+static int cr_restore_functions(const char *path, api_record_t *record, resource_mg *rm_functions) 
+{
+    FILE *fp = NULL;
+    char *file_name;
+    const char *suffix = "func";
+    void *module = NULL;
+    int ret = 1;
+    rpc_register_function_1_argument *arg = ((rpc_register_function_1_argument*)record->arguments);
+    ptr fatCubinHandle = arg->arg1;
+    ptr hostFun = arg->arg2;
+    char* func_name = arg->arg4;
+    int name_len = arg->arg6;
+    char *func_name_ptr;
+    if ( (func_name_ptr = (char*)malloc(sizeof(char)*name_len + 1)) == NULL) {
+        LOGE(LOG_ERROR, "could not allocate memory");
+        return 1;
+    }
+
+    if (asprintf(&file_name, "%s/%s-0x%lx",
+                 path, suffix, func_name) < 0) {
+        LOGE(LOG_ERROR, "memory allocation failed");
+        goto out;
+    }
+
+    if ((fp = fopen(file_name, "rb")) != NULL) {
+        if (ferror(fp) || feof(fp)) {
+            LOGE(LOG_ERROR, "file descriptor is invalid");
+            goto cleanup;
+            return 1;
+        }
+
+        if (fread((void*)func_name_ptr,
+                   1, name_len, fp) != name_len) {
+            LOGE(LOG_ERROR, "error reading function name");
+            goto cleanup;
+        }
+    } else {
+        LOGE(LOG_WARNING, "could not open memory file: %s", file_name);
+        goto out;
+    }
+    func_name_ptr[name_len] = '\0';
+
+    if ((module = resource_mg_get(&rm_modules, (void*)fatCubinHandle)) == (void*)fatCubinHandle) {
+        LOGE(LOG_ERROR, "%p not found in resource manager - we cannot call a function from an unknown module.", fatCubinHandle);
+        return 1;
+    }
+    CUfunction func_ptr;
+    CUresult res;
+    res = cuModuleGetFunction(&func_ptr,
+                    module,
+                    func_name_ptr);
+    if (res != CUDA_SUCCESS) {
+        LOGE(LOG_ERROR, "cuModuleLoadData failed: %d", res);
+        goto out;
+    }
+
+    LOG(LOG_DEBUG, "restored functions mapping %p -> %p", 
+                                (void*)hostFun, 
+                                (void*)func_ptr);
+    if (resource_mg_add_sorted(rm_functions, (void*)hostFun, (void*)func_ptr) != 0) {
+        LOGE(LOG_ERROR, "error in resource manager");
+    }
+    printf("func name: %s, size %d\n", func_name_ptr, strlen(func_name_ptr));
+    ret = 0;
+
+cleanup:
+    free(file_name);
+    fclose(fp);
+out:
+    return ret;
+}
+
 extern void rpc_dispatch(struct svc_req *rqstp, xdrproc_t *ret_arg, xdrproc_t *ret_res, size_t *res_sz, bool_t (**ret_fun)(char *, void *, struct svc_req *));
 
 int cr_call_record(api_record_t *record)
@@ -712,17 +855,28 @@ int cr_call_record(api_record_t *record)
     rpc_dispatch(&rqstp, &arg, &res, &res_sz, &fun);
     result = malloc(res_sz);
 	retval = (bool_t) (*fun)((char *)record->arguments, result, &rqstp);
-
     return (retval==1 ? 0 : 1);
 }
 
-static int cr_restore_resources(const char *path, api_record_t *record, resource_mg *rm_memory, resource_mg *rm_streams, resource_mg *rm_events, resource_mg *rm_arrays, resource_mg *rm_cusolver, resource_mg *rm_cublas)
+static int cr_restore_resources(const char *path, api_record_t *record, resource_mg *rm_functions, resource_mg *rm_modules, resource_mg *rm_memory, resource_mg *rm_streams, resource_mg *rm_events, resource_mg *rm_arrays, resource_mg *rm_cusolver, resource_mg *rm_cublas)
 {
     int ret = 1;
     switch (record->function) {
+    case rpc_elf_load:
+        if (cr_restore_fatbinary(path, record, rm_modules) != 0) {
+            LOGE(LOG_ERROR, "error restoring elf");
+            goto cleanup;
+        }
+        break;
+    case rpc_register_function:
+        if (cr_restore_functions(path, record, rm_functions) != 0) {
+            LOGE(LOG_ERROR, "error restoring functions");
+            goto cleanup;
+        }
+        break;
     case CUDA_MALLOC:
         if (cr_restore_memory(path, record, rm_memory) != 0) {
-            LOGE(LOG_ERROR, "error dumping memory");
+            LOGE(LOG_ERROR, "error restoring memory");
             goto cleanup;
         }
         break;
@@ -769,7 +923,8 @@ static int cr_restore_resources(const char *path, api_record_t *record, resource
         }
         break;
     default:
-        if (cr_call_record(record) != 0) {
+        int res = cr_call_record(record);
+        if (res != 0) {
             LOGE(LOG_ERROR, "calling record function failed");
             goto cleanup;
         }
@@ -829,7 +984,7 @@ int cr_launch_kernel(void)
     return ret;
 }
 
-int cr_restore(const char *path, resource_mg *rm_memory, resource_mg *rm_streams, resource_mg *rm_events, resource_mg *rm_arrays, resource_mg *rm_cusolver, resource_mg *rm_cublas)
+int cr_restore(const char *path, resource_mg *rm_functions, resource_mg *rm_modules, resource_mg *rm_memory, resource_mg *rm_streams, resource_mg *rm_events, resource_mg *rm_arrays, resource_mg *rm_cusolver, resource_mg *rm_cublas)
 {
     FILE *fp = NULL;
     char *file_name;
@@ -867,7 +1022,7 @@ int cr_restore(const char *path, resource_mg *rm_memory, resource_mg *rm_streams
             }
         }
         api_records_print_records(record);
-        if (cr_restore_resources(path, record, rm_memory, rm_streams,
+        if (cr_restore_resources(path, record, rm_functions, rm_modules, rm_memory, rm_streams,
                                  rm_events, rm_arrays, rm_cusolver, rm_cublas) != 0) {
             LOGE(LOG_ERROR, "error restoring resources");
             goto cleanup;

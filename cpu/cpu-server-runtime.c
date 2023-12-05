@@ -67,6 +67,15 @@ int server_runtime_init(int restore)
         LOGE(LOG_ERROR, "mt_memcpy: failed to initialize list.");
         ret &= 1;
     }
+    // Make sure runtime API is initialized
+    // If we don't do this and use the driver API, it might be unintialized
+    cudaError_t cres;
+    if ((cres = cudaSetDevice(0)) != cudaSuccess) {
+        LOG(LOG_ERROR, "cudaSetDevice failed: %d", cres);
+        ret = 1;
+    }
+    cudaDeviceSynchronize();
+    
     if (!restore) {
         ret &= resource_mg_init(&rm_streams, 1);
         ret &= resource_mg_init(&rm_events, 1);
@@ -85,14 +94,6 @@ int server_runtime_init(int restore)
         ret &= server_runtime_restore("ckp");
     }
     
-    // Make sure runtime API is initialized
-    // If we don't do this and use the driver API, it might be unintialized
-    cudaError_t cres;
-    if ((cres = cudaSetDevice(0)) != cudaSuccess) {
-        LOG(LOG_ERROR, "cudaSetDevice failed: %d", cres);
-        ret = 1;
-    }
-    cudaDeviceSynchronize();
 
     return ret;
 }
@@ -135,7 +136,7 @@ int server_runtime_restore(const char *path)
     struct timeval start, end;
     double time = 0;
     gettimeofday(&start, NULL);
-    if (cr_restore(path, &rm_memory, &rm_streams, &rm_events, &rm_arrays, cusolver_get_rm(), cublas_get_rm()) != 0) {
+    if (cr_restore(path, &rm_functions, &rm_modules, &rm_memory, &rm_streams, &rm_events, &rm_arrays, cusolver_get_rm(), cublas_get_rm()) != 0) {
         LOGE(LOG_ERROR, "error restoring api_records");
         return 1;
     }
