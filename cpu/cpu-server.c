@@ -106,6 +106,13 @@ static void signal_checkpoint(int signo)
     }
 }
 
+static void signal_restore(int signo)
+{
+   if (server_init(1) != 0) {
+       LOGE(LOG_ERROR, "failed to restore from checkpoint");
+   }
+}
+
 bool_t rpc_checkpoint_1_svc(int *result, struct svc_req *rqstp)
 {
     int ret;
@@ -160,6 +167,40 @@ bool_t rpc_dlopen_1_svc(char *path, int *result, struct svc_req *rqstp)
     }
     *result = 0;
     return 1;
+}
+
+int server_init(int restore) {
+    sched = &sched_none;
+    if (sched->init() != 0) {
+        LOGE(LOG_ERROR, "initializing scheduler failed.");
+        return 5;
+    }
+
+    if (list_init(&api_records, sizeof(api_record_t)) != 0) {
+        LOGE(LOG_ERROR, "initializing api recorder failed.");
+        return 5;
+    }
+
+    if (server_driver_init(restore) != 0) {
+        LOGE(LOG_ERROR, "initializing server_runtime failed.");
+        return 4;       
+    }
+    
+    if (server_runtime_init(restore) != 0) {
+        LOGE(LOG_ERROR, "initializing server_runtime failed.");
+        return 3;
+    }
+    
+    if (server_nvml_init(restore) != 0) {
+        LOGE(LOG_ERROR, "initializing server_nvml failed.");
+        return 2;
+    }
+
+    if (server_cudnn_init(restore) != 0) {
+        LOGE(LOG_ERROR, "initializing server_nvml failed.");
+        return 1;
+    }
+    return 0;
 }
 
 void cricket_main(size_t prog_num, size_t vers_num)
@@ -269,38 +310,21 @@ void cricket_main(size_t prog_num, size_t vers_num)
     // } else {
     //     cudaRegisterAllv();
     // }
-
-    sched = &sched_none;
-    if (sched->init() != 0) {
-        LOGE(LOG_ERROR, "initializing scheduler failed.");
-        goto cleanup4;
+    int init_state = server_init(restore);
+    switch(init_state) {
+        case 0:
+            break;
+        case 1:
+            goto cleanup1;
+        case 2:
+            goto cleanup2;
+        case 3:
+            goto cleanup3;
+        case 4:
+            goto cleanup4;
+        case 5:
+            goto cleanup5;
     }
-
-    if (list_init(&api_records, sizeof(api_record_t)) != 0) {
-        LOGE(LOG_ERROR, "initializing api recorder failed.");
-        goto cleanup4;
-    }
-
-    if (server_driver_init(restore) != 0) {
-        LOGE(LOG_ERROR, "initializing server_runtime failed.");
-        goto cleanup2;        
-    }
-    
-    if (server_runtime_init(restore) != 0) {
-        LOGE(LOG_ERROR, "initializing server_runtime failed.");
-        goto cleanup3;
-    }
-    
-    if (server_nvml_init(restore) != 0) {
-        LOGE(LOG_ERROR, "initializing server_nvml failed.");
-        goto cleanup1;
-    }
-
-    if (server_cudnn_init(restore) != 0) {
-        LOGE(LOG_ERROR, "initializing server_nvml failed.");
-        goto cleanup0;
-    }
-
 #ifdef WITH_IB
 
     if (ib_init(ib_device, client) != 0) {
@@ -313,7 +337,12 @@ void cricket_main(size_t prog_num, size_t vers_num)
 
     if (signal(SIGUSR1, signal_checkpoint) == SIG_ERR) {
         LOGE(LOG_ERROR, "An error occurred while setting a signal handler.");
-        goto cleanup00;
+        goto cleanup0;
+    }
+
+    if (signal(SIGUSR2, signal_restore) == SIG_ERR) {
+        LOGE(LOG_ERROR, "An error occurred while setting a signal handler.");
+        goto cleanup0;
     }
 
     LOG(LOG_INFO, "waiting for RPC requests...");
@@ -326,17 +355,17 @@ void cricket_main(size_t prog_num, size_t vers_num)
     LOG(LOG_DEBUG, "svc_run returned. Cleaning up.");
     ret = 0;
     //api_records_print();
- cleanup00:
-    server_cudnn_deinit();
  cleanup0:
-    server_driver_deinit();
+    server_cudnn_deinit();
  cleanup1:
     server_nvml_deinit();
  cleanup2:
     server_runtime_deinit();
  cleanup3:
-    api_records_free();
+    server_driver_deinit();
  cleanup4:
+    api_records_free();
+ cleanup5:
     pmap_unset(prog, vers);
     svc_destroy(transp);
     unlink(CD_SOCKET_PATH);

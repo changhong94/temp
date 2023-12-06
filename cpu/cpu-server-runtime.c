@@ -118,6 +118,10 @@ int server_runtime_checkpoint(const char *path, int dump_memory, unsigned long p
         LOGE(LOG_ERROR, "error dumping api_records");
         return 1;
     }
+    
+    // sync device to make sure cuda kernels have all completed. So device memory contains only results.
+    // no need to relaunch cuda kernels. 
+    cudaDeviceSynchronize();
     if (cr_dump(path) != 0) {
         LOGE(LOG_ERROR, "error dumping api_records");
         return 1;

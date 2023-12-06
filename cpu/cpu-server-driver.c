@@ -65,6 +65,7 @@ bool_t rpc_elf_load_1_svc(mem_data elf, ptr module_key, int *result, struct svc_
     LOGE(LOG_DEBUG, "->module: %p", module);
     *result = 0;
 #ifdef CKPT
+    // can only checkpoint module infos in here because memory maybe free/changed afterwards
     int ret = cr_dump_modules("ckp", elf);
     if(ret != 0) {
         LOGE(LOG_ERROR, "could not dump cuModules");

@@ -207,11 +207,6 @@ void __attribute__((destructor)) deinit_rpc(void)
 {
     enum clnt_stat retval_1;
     int result;
-#ifdef CKPT
-    printf("rpc checkpoint start\n");
-    retval_1 = rpc_checkpoint_1(&result, clnt);
-    printf("rpc checkpoint finished\n");
-#endif 
     if (initialized) {
         retval_1 = rpc_deinit_1(&result, clnt);
         if (retval_1 != RPC_SUCCESS) {

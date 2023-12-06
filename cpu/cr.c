@@ -942,6 +942,9 @@ int cr_launch_kernel(void)
     static uint64_t zero = 0LL;
     int ret = 1;
 
+    // reverse order because we only care about the last kernel
+    // and same time, record list will be incremented as running.
+    // in our case, might not need to run kernel if checkpoint after kernel execution.
     for (size_t i = api_records.length-1; i > 0; --i) {
         record = list_get(&api_records, i);
         if (record->function == CUDA_LAUNCH_KERNEL) {
@@ -1028,10 +1031,13 @@ int cr_restore(const char *path, resource_mg *rm_functions, resource_mg *rm_modu
             goto cleanup;
         }
     }
+    // no need to re-launch kernel because we checkpoint when kernel finished.
+    /***
     if (cr_launch_kernel() != 0) {
         LOGE(LOG_ERROR, "launching kernel failed");
         goto cleanup;
     }
+    ***/
     res = 0;
 cleanup:
     free(file_name);
