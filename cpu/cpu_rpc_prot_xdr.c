@@ -699,6 +699,8 @@ xdr_rpc_register_var_1_argument (XDR *xdrs, rpc_register_var_1_argument *objp)
 		 return FALSE;
 	 if (!xdr_int (xdrs, &objp->arg8))
 		 return FALSE;
+	 if (!xdr_int (xdrs, &objp->arg9))
+		 return FALSE;
 	return TRUE;
 }
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <cuda.h>
 
@@ -66,7 +67,7 @@ bool_t rpc_elf_load_1_svc(mem_data elf, ptr module_key, int *result, struct svc_
     *result = 0;
 #ifdef CKPT
     // can only checkpoint module infos in here because memory maybe free/changed afterwards
-    int ret = cr_dump_modules("ckp", elf);
+    int ret = cr_dump_modules("ckp", elf, module_key);
     if(ret != 0) {
         LOGE(LOG_ERROR, "could not dump cuModules");
     }
@@ -75,37 +76,41 @@ bool_t rpc_elf_load_1_svc(mem_data elf, ptr module_key, int *result, struct svc_
 }
 
 #ifdef CKPT
-    int cr_dump_modules(const char *path, mem_data elf){
-        FILE *fp = NULL;
-        char* file_name;
-        const char *suffix = "elf";
-        int res = 1;
-        struct stat path_stat = { 0 };
+int cr_dump_modules(const char *path, mem_data elf, ptr module_key) {
+    FILE *fp = NULL;
+    char* file_name;
+    const char *suffix = "elf";
+    int res = 1;
+    struct stat path_stat = { 0 };
 
-        if (stat(path, &path_stat) != 0) {
-            LOG(LOG_DEBUG, "directory \"%s\" does not exist. Let's create it.", path);
-            if (mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0) {
-                LOGE(LOG_ERROR, "failed to create directory \"%s\"", path);
-            }
-        } else if (!S_ISDIR(path_stat.st_mode)) {
-            LOG(LOG_ERROR, "file \"%s\" is not a directory", path);
+    if (stat(path, &path_stat) != 0) {
+        LOG(LOG_DEBUG, "directory \"%s\" does not exist. Let's create it.", path);
+        if (mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0) {
+            LOGE(LOG_ERROR, "failed to create directory \"%s\"", path);
         }
-        if (asprintf(&file_name, "%s/%s-0x%lx",
-                    path, suffix, elf.mem_data_val) < 0) {
-            LOGE(LOG_ERROR, "memory allocation failed");
-            goto out;
-        }
+    } else if (!S_ISDIR(path_stat.st_mode)) {
+        LOG(LOG_ERROR, "file \"%s\" is not a directory", path);
+    }
+    if (asprintf(&file_name, "%s/%s-0x%lx-0x%lx",
+                path, suffix, module_key, elf.mem_data_val) < 0) {
+        LOGE(LOG_ERROR, "memory allocation failed");
+        goto out;
+    }
+    if(access(file_name, F_OK) == 0) {
+        LOGE(LOG_ERROR, "file already exist, overwrite might happen");
+        goto out;
+    }
 
-        if ((fp = fopen(file_name, "w+b")) == NULL) {
-            LOGE(LOG_ERROR, "error while opening file");
-            free(file_name);
-            goto out;
-        }
+    if ((fp = fopen(file_name, "w+b")) == NULL) {
+        LOGE(LOG_ERROR, "error while opening file");
+        free(file_name);
+        goto out;
+    }
 
-        if (fwrite(elf.mem_data_val,
-               1, elf.mem_data_len, fp) != elf.mem_data_len) {
-            LOGE(LOG_ERROR, "error writing elf_data");
-        }
+    if (fwrite(elf.mem_data_val,
+            1, elf.mem_data_len, fp) != elf.mem_data_len) {
+        LOGE(LOG_ERROR, "error writing elf_data");
+    }
     LOG(LOG_DEBUG, "dumped memory of size %zu to %s", elf.mem_data_len, file_name);
     res = 0;
 cleanup:
@@ -186,36 +191,41 @@ bool_t rpc_register_function_1_svc(ptr fatCubinHandle, ptr hostFun, char* device
     GSCHED_RELEASE;
     RECORD_RESULT(ptr_result_u, *result);
 #ifdef CKPT
-    int ret = cr_dump_functions("ckp", deviceName, name_len);
+    int ret = cr_dump_functions("ckp", hostFun, deviceName, name_len);
     if(ret != 0) {
         LOGE(LOG_ERROR, "could not dump functions");
     }
 #endif
     return 1;
 }
+
 #ifdef CKPT
-    int cr_dump_functions(const char *path, char* deviceName, int name_len){
-        FILE *fp = NULL;
-        char* file_name;
-        const char *suffix = "func";
-        int res = 1;
+int cr_dump_functions(const char *path, ptr hostFun, char* deviceName, int name_len) {
+    FILE *fp = NULL;
+    char* file_name;
+    const char *suffix = "func";
+    int res = 1;
 
-        if (asprintf(&file_name, "%s/%s-0x%lx",
-                    path, suffix, deviceName) < 0) {
-            LOGE(LOG_ERROR, "memory allocation failed");
-            goto out;
-        }
+    if (asprintf(&file_name, "%s/%s-0x%lx-0x%lx",
+                path, suffix, hostFun, deviceName) < 0) {
+        LOGE(LOG_ERROR, "memory allocation failed");
+        goto out;
+    }
+    if(access(file_name, F_OK) == 0) {
+        LOGE(LOG_ERROR, "file already exist, overwrite might happen");
+        goto out;
+    }
 
-        if ((fp = fopen(file_name, "w+b")) == NULL) {
-            LOGE(LOG_ERROR, "error while opening file");
-            free(file_name);
-            goto out;
-        }
+    if ((fp = fopen(file_name, "w+b")) == NULL) {
+        LOGE(LOG_ERROR, "error while opening file");
+        free(file_name);
+        goto out;
+    }
 
-        if (fwrite(deviceName,
-               1, name_len, fp) != name_len) {
-            LOGE(LOG_ERROR, "error writing func_data");
-        }
+    if (fwrite(deviceName,
+            1, name_len, fp) != name_len) {
+        LOGE(LOG_ERROR, "error writing func_data");
+    }
     LOG(LOG_DEBUG, "dumped memory of size %zu to %s", name_len, file_name);
     res = 0;
 cleanup:
@@ -228,7 +238,7 @@ out:
 
 // Does not support checkpoint/restart yet
 bool_t rpc_register_var_1_svc(ptr fatCubinHandle, ptr hostVar, ptr deviceAddress, char *deviceName, int ext, size_t size,
-                        int constant, int global, int *result, struct svc_req *rqstp)
+                        int constant, int global, int name_len, int *result, struct svc_req *rqstp)
 {
     RECORD_API(rpc_register_var_1_argument);
     RECORD_ARG(1, fatCubinHandle);
@@ -239,6 +249,7 @@ bool_t rpc_register_var_1_svc(ptr fatCubinHandle, ptr hostVar, ptr deviceAddress
     RECORD_ARG(6, size);
     RECORD_ARG(7, constant);
     RECORD_ARG(8, global);
+    RECORD_ARG(9, name_len);
     
     LOG(LOG_DEBUG, "rpc_register_var(fatCubinHandle: %p, hostVar: %p, deviceAddress: %p, deviceName: %s, "
                    "ext: %d, size: %d, constant: %d, global: %d)",
@@ -267,8 +278,51 @@ bool_t rpc_register_var_1_svc(ptr fatCubinHandle, ptr hostVar, ptr deviceAddress
     }
     GSCHED_RELEASE;
     RECORD_RESULT(integer, *result);
+#ifdef CKPT
+    int ret = cr_dump_vars("ckp", hostVar, deviceName, name_len);
+    if(ret != 0) {
+        LOGE(LOG_ERROR, "could not dump functions");
+    }
+#endif
     return 1;
 }
+
+#ifdef CKPT
+int cr_dump_vars(const char *path, ptr hostVar, char* deviceName, int name_len) {
+    FILE *fp = NULL;
+    char* file_name;
+    const char *suffix = "vars";
+    int res = 1;
+
+    if (asprintf(&file_name, "%s/%s-0x%lx-0x%lx",
+                path, suffix, hostVar, deviceName) < 0) {
+        LOGE(LOG_ERROR, "memory allocation failed");
+        goto out;
+    }
+    if(access(file_name, F_OK) == 0) {
+        LOGE(LOG_ERROR, "file already exist, overwrite might happen");
+        goto out;
+    }
+
+    if ((fp = fopen(file_name, "w+b")) == NULL) {
+        LOGE(LOG_ERROR, "error while opening file");
+        free(file_name);
+        goto out;
+    }
+
+    if (fwrite(deviceName,
+            1, name_len, fp) != name_len) {
+        LOGE(LOG_ERROR, "error writing var_data");
+    }
+    LOG(LOG_DEBUG, "dumped memory of size %zu to %s", name_len, file_name);
+    res = 0;
+cleanup:
+    free(file_name);
+    fclose(fp);
+out:
+    return res;
+    }
+#endif
 
 int server_driver_deinit(void)
 {

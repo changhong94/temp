@@ -81,7 +81,7 @@ rpc_elf_unload_1(ptr arg1, int *clnt_res,  CLIENT *clnt)
 }
 
 enum clnt_stat 
-rpc_register_var_1(ptr arg1, ptr arg2, ptr arg3, char *arg4, int arg5, size_t arg6, int arg7, int arg8, int *clnt_res,  CLIENT *clnt)
+rpc_register_var_1(ptr arg1, ptr arg2, ptr arg3, char *arg4, int arg5, size_t arg6, int arg7, int arg8, int arg9, int *clnt_res,  CLIENT *clnt)
 {
 	rpc_register_var_1_argument arg;
 	arg.arg1 = arg1;
@@ -92,6 +92,7 @@ rpc_register_var_1(ptr arg1, ptr arg2, ptr arg3, char *arg4, int arg5, size_t ar
 	arg.arg6 = arg6;
 	arg.arg7 = arg7;
 	arg.arg8 = arg8;
+	arg.arg9 = arg9;
 	return (clnt_call (clnt, rpc_register_var, (xdrproc_t) xdr_rpc_register_var_1_argument, (caddr_t) &arg,
 		(xdrproc_t) xdr_int, (caddr_t) clnt_res,
 		TIMEOUT));

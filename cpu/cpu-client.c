@@ -304,7 +304,8 @@ void __cudaRegisterVar(void **fatCubinHandle, char *hostVar, char *deviceAddress
     LOGE(LOG_DEBUG, "__cudaRegisterVar(fatCubinHandle=%p, hostVar=%p, deviceAddress=%p, "
            "deviceName=%s, ext=%d, size=%zu, constant=%d, global=%d)\n",
            fatCubinHandle, hostVar, deviceAddress, deviceName, ext, size, constant, global);
-    retval_1 = rpc_register_var_1((ptr)fatCubinHandle, (ptr)hostVar, (ptr)deviceAddress, (char*)deviceName, ext, size, constant, global,
+    int name_len = strlen(deviceName);
+    retval_1 = rpc_register_var_1((ptr)fatCubinHandle, (ptr)hostVar, (ptr)deviceAddress, (char*)deviceName, ext, size, constant, global, name_len,
                                        &result, clnt);
     if (retval_1 != RPC_SUCCESS) {
         LOGE(LOG_ERROR, "call failed.");

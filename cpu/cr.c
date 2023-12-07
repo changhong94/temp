@@ -710,19 +710,21 @@ static int cr_restore_fatbinary(const char *path, api_record_t *record, resource
     mem_data elf;
     void *elf_ptr;
     int ret = 1;
+    ptr module_key;
     CUresult res;
     CUmodule module = NULL;
 
     rpc_elf_load_1_argument *arg = ((rpc_elf_load_1_argument*)record->arguments);
     elf = arg->arg1;
+    module_key = arg->arg2;
 
     if ( (elf_ptr = malloc(elf.mem_data_len)) == NULL) {
         LOGE(LOG_ERROR, "could not allocate memory");
         return 1;
     }
 
-    if (asprintf(&file_name, "%s/%s-0x%lx",
-                 path, suffix, elf.mem_data_val) < 0) {
+    if (asprintf(&file_name, "%s/%s-0x%lx-0x%lx",
+                 path, suffix, module_key, elf.mem_data_val) < 0) {
         LOGE(LOG_ERROR, "memory allocation failed");
         goto out;
     }
@@ -785,8 +787,8 @@ static int cr_restore_functions(const char *path, api_record_t *record, resource
         return 1;
     }
 
-    if (asprintf(&file_name, "%s/%s-0x%lx",
-                 path, suffix, func_name) < 0) {
+    if (asprintf(&file_name, "%s/%s-0x%lx-0x%lx",
+                 path, suffix, hostFun, func_name) < 0) {
         LOGE(LOG_ERROR, "memory allocation failed");
         goto out;
     }
@@ -839,6 +841,76 @@ out:
     return ret;
 }
 
+static int cr_restore_vars(const char *path, api_record_t *record, resource_mg *rm_globals) 
+{
+    FILE *fp = NULL;
+    char *file_name;
+    const char *suffix = "vars";
+    void *module = NULL;
+    int ret = 1;
+    rpc_register_var_1_argument *arg = ((rpc_register_var_1_argument*)record->arguments);
+    ptr fatCubinHandle = arg->arg1;
+    ptr hostVar = arg->arg2;
+    char* func_name = arg->arg4;
+    int name_len = arg->arg9;
+    char *var_name_ptr;
+    CUdeviceptr dptr = 0;
+    size_t d_size = 0;
+
+    if ( (var_name_ptr = (char*)malloc(sizeof(char)*name_len + 1)) == NULL) {
+        LOGE(LOG_ERROR, "could not allocate memory");
+        return 1;
+    }
+
+    if (asprintf(&file_name, "%s/%s-0x%lx-0x%lx",
+                 path, suffix, hostVar, func_name) < 0) {
+        LOGE(LOG_ERROR, "memory allocation failed");
+        goto out;
+    }
+
+    if ((fp = fopen(file_name, "rb")) != NULL) {
+        if (ferror(fp) || feof(fp)) {
+            LOGE(LOG_ERROR, "file descriptor is invalid");
+            goto cleanup;
+            return 1;
+        }
+
+        if (fread((void*)var_name_ptr,
+                   1, name_len, fp) != name_len) {
+            LOGE(LOG_ERROR, "error reading var name");
+            goto cleanup;
+        }
+    } else {
+        LOGE(LOG_WARNING, "could not open memory file: %s", file_name);
+        goto out;
+    }
+    var_name_ptr[name_len] = '\0';
+
+    if ((module = resource_mg_get(&rm_modules, (void*)fatCubinHandle)) == (void*)fatCubinHandle) {
+        LOGE(LOG_ERROR, "%p not found in resource manager - we cannot call a function from an unknown module.", fatCubinHandle);
+        return 1;
+    }
+    CUresult res;
+    if ((res = cuModuleGetGlobal(&dptr, &d_size, module, var_name_ptr)) != CUDA_SUCCESS) {
+        LOGE(LOG_ERROR, "cuModuleGetGlobal failed: %d", res);
+        return 1;
+    }
+
+    LOG(LOG_DEBUG, "restored vars mapping %p -> %p", 
+                                (void*)hostVar, 
+                                (void*)dptr);
+    if (resource_mg_add_sorted(rm_globals, (void*)hostVar, (void*)dptr) != 0) {
+        LOGE(LOG_ERROR, "error in resource manager");
+    }
+    ret = 0;
+
+cleanup:
+    free(file_name);
+    fclose(fp);
+out:
+    return ret;
+}
+
 extern void rpc_dispatch(struct svc_req *rqstp, xdrproc_t *ret_arg, xdrproc_t *ret_res, size_t *res_sz, bool_t (**ret_fun)(char *, void *, struct svc_req *));
 
 int cr_call_record(api_record_t *record)
@@ -870,6 +942,12 @@ static int cr_restore_resources(const char *path, api_record_t *record, resource
         break;
     case rpc_register_function:
         if (cr_restore_functions(path, record, rm_functions) != 0) {
+            LOGE(LOG_ERROR, "error restoring functions");
+            goto cleanup;
+        }
+        break;
+    case rpc_register_var:
+    if (cr_restore_vars(path, record, &rm_globals) != 0) {
             LOGE(LOG_ERROR, "error restoring functions");
             goto cleanup;
         }
@@ -944,7 +1022,7 @@ int cr_launch_kernel(void)
 
     // reverse order because we only care about the last kernel
     // and same time, record list will be incremented as running.
-    // in our case, might not need to run kernel if checkpoint after kernel execution.
+    // in our case, might not need to run kernel if checkpoint after kernejl execution.
     for (size_t i = api_records.length-1; i > 0; --i) {
         record = list_get(&api_records, i);
         if (record->function == CUDA_LAUNCH_KERNEL) {

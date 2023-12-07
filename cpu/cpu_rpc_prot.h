@@ -282,6 +282,7 @@ struct rpc_register_var_1_argument {
 	size_t arg6;
 	int arg7;
 	int arg8;
+	int arg9;
 };
 typedef struct rpc_register_var_1_argument rpc_register_var_1_argument;
 
@@ -1164,8 +1165,8 @@ extern  bool_t rpc_elf_load_1_svc(mem_data , ptr , int *, struct svc_req *);
 extern  enum clnt_stat rpc_elf_unload_1(ptr , int *, CLIENT *);
 extern  bool_t rpc_elf_unload_1_svc(ptr , int *, struct svc_req *);
 #define rpc_register_var 53
-extern  enum clnt_stat rpc_register_var_1(ptr , ptr , ptr , char *, int , size_t , int , int , int *, CLIENT *);
-extern  bool_t rpc_register_var_1_svc(ptr , ptr , ptr , char *, int , size_t , int , int , int *, struct svc_req *);
+extern  enum clnt_stat rpc_register_var_1(ptr , ptr , ptr , char *, int , size_t , int , int , int, int *, CLIENT *);
+extern  bool_t rpc_register_var_1_svc(ptr , ptr , ptr , char *, int , size_t , int , int , int, int *, struct svc_req *);
 #define CUDA_CHOOSE_DEVICE 101
 extern  enum clnt_stat cuda_choose_device_1(mem_data , int_result *, CLIENT *);
 extern  bool_t cuda_choose_device_1_svc(mem_data , int_result *, struct svc_req *);

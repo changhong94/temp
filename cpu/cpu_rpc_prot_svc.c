@@ -61,7 +61,7 @@ _rpc_elf_unload_1 (ptr  *argp, void *result, struct svc_req *rqstp)
 int
 _rpc_register_var_1 (rpc_register_var_1_argument *argp, void *result, struct svc_req *rqstp)
 {
-	return (rpc_register_var_1_svc(argp->arg1, argp->arg2, argp->arg3, argp->arg4, argp->arg5, argp->arg6, argp->arg7, argp->arg8, result, rqstp));
+	return (rpc_register_var_1_svc(argp->arg1, argp->arg2, argp->arg3, argp->arg4, argp->arg5, argp->arg6, argp->arg7, argp->arg8, argp->arg9, result, rqstp));
 }
 
 int
