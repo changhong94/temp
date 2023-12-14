@@ -227,10 +227,10 @@ program RPC_CD_PROG {
         int          rpc_deinit(void)                                             = 1;
         int          rpc_printmessage(string)                                     = 2;
         int          rpc_dlopen(string)                                           = 3;
-        ptr_result   rpc_register_function(ptr, ptr, string, string, int)        = 50;
+        ptr_result   rpc_register_function(ptr, ptr, string, string, int, int)        = 50;
         int          rpc_elf_load(mem_data, ptr)                                 = 51;
         int          rpc_elf_unload(ptr)                                         = 52;
-        int          rpc_register_var(ptr, ptr, ptr, string, int, size_t, int, int) = 53;
+        int          rpc_register_var(ptr, ptr, ptr, string, int, size_t, int, int, int) = 53;
 
         /* RUNTIME API */
         /* ### Device Management ### */
