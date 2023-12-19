@@ -186,8 +186,8 @@ bool_t rpc_register_function_1_svc(ptr fatCubinHandle, ptr hostFun, char* device
         LOGE(LOG_ERROR, "error in resource manager");
     }
     //result->ptr_result_u.ptr = func_ptr
-    printf("func name: %s, size %d\n", deviceFun, strlen(deviceFun));
-    printf("dev name: %s, size %d\n", deviceName, strlen(deviceName));
+    //printf("func name: %s, size %d\n", deviceFun, strlen(deviceFun));
+    //printf("dev name: %s, size %d\n", deviceName, strlen(deviceName));
     GSCHED_RELEASE;
     RECORD_RESULT(ptr_result_u, *result);
 #ifdef CKPT
