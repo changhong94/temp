@@ -832,7 +832,7 @@ static int cr_restore_functions(const char *path, api_record_t *record, resource
     if (resource_mg_add_sorted(rm_functions, (void*)hostFun, (void*)func_ptr) != 0) {
         LOGE(LOG_ERROR, "error in resource manager");
     }
-    printf("func name: %s, size %d\n", func_name_ptr, strlen(func_name_ptr));
+    //printf("func name: %s, size %d\n", func_name_ptr, strlen(func_name_ptr));
     ret = 0;
 
 cleanup:
