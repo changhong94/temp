@@ -1389,13 +1389,14 @@ bool_t rpc_cudnnbackendgetattribute_1_svc(ptr descriptor, int attributeName, int
         LOGE(LOG_ERROR, "attributeType out of range.");
         return 0;
     }
-    result->mem_result_u.data.mem_data_len = sizeof(int64_t) + requestedElementCount*sizeof(backendAttributeSizes[attributeType]);
-    if ((result->mem_result_u.data.mem_data_val = malloc(result->mem_result_u.data.mem_data_len)) == NULL) {
+    result->mem_result_u.data.mem_data_len = sizeof(int64_t) + requestedElementCount* backendAttributeSizes[attributeType];
+    result->mem_result_u.data.mem_data_val = malloc(result->mem_result_u.data.mem_data_len);
+    if (result->mem_result_u.data.mem_data_val == NULL) {
         LOGE(LOG_ERROR, "malloc failed");
         return 0;
     }
-    if (requestedElementCount > 0) {
-        void *data = result->mem_result_u.data.mem_data_val + sizeof(int64_t);
+if (requestedElementCount > 0) {
+        arrayOfElements = result->mem_result_u.data.mem_data_val + sizeof(int64_t);
     }
     
     GSCHED_RETAIN;
