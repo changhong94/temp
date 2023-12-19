@@ -139,7 +139,7 @@ static void* resource_memory_mg_search_map(resource_mg *mg, void *client_address
             } else {
                 offset = client_address - mid_elem->client_address;
                 //printf("gonna return with offset , client addr: %p, cuda addr: %p , offset:%ld\n", client_address, 
-                mid_elem->cuda_address, offset);
+                //mid_elem->cuda_address, offset);
 
                 return mid_elem->cuda_address + offset;
             }
