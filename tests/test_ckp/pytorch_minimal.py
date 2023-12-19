@@ -52,7 +52,7 @@ c = torch.randn((), device=device, dtype=dtype)
 d = torch.randn((), device=device, dtype=dtype)
 
 learning_rate = 1e-6
-for t in range(5):
+for t in range(3):
     # Forward pass: compute predicted y
     y_pred = a + b * x + c * x ** 2 + d * x ** 3
 
@@ -78,9 +78,9 @@ for t in range(5):
     if len(sys.argv)!=1 and t==2:
         print("argv 1 is", sys.argv[1])
         os.kill(int(sys.argv[1]), signal.SIGUSR1)
-        import gc
-        torch.cuda.empty_cache()
-        gc.collect()
+        #import gc
+        #torch.cuda.empty_cache()
+        #gc.collect()
         print("---------waiting for input to restore-------")
         input()
         os.kill(int(sys.argv[1]), signal.SIGUSR2)

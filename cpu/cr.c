@@ -352,13 +352,14 @@ static int cr_restore_memory(const char *path, api_record_t *record, resource_mg
         return 1;
     }
 
-    LOG(LOG_DEBUG, "restored mapping %p -> %p", 
+    LOG(LOG_DEBUG, "restored memory mapping %p -> %p, size %d", 
                                (void*)result.ptr_result_u.ptr, 
-                               cuda_ptr);
-
-    if (resource_mg_add_sorted(rm_memory, 
-                               (void*)result.ptr_result_u.ptr, 
-                               cuda_ptr) != 0) {
+                               cuda_ptr,
+                               mem_size);
+    if (resource_memory_mg_add_sorted(rm_memory, 
+                                (void*)result.ptr_result_u.ptr, 
+                               cuda_ptr,
+                               mem_size) != 0) {
         LOGE(LOG_ERROR, "error adding memory resource to resource manager");
         return 1;
     }
@@ -957,6 +958,7 @@ static int cr_restore_resources(const char *path, api_record_t *record, resource
             LOGE(LOG_ERROR, "error restoring memory");
             goto cleanup;
         }
+        // resource_mg_print(rm_memory);
         break;
     case CUDA_MEMCPY_HTOD:
     case CUDA_MEMCPY_DTOD:
@@ -999,6 +1001,9 @@ static int cr_restore_resources(const char *path, api_record_t *record, resource
             LOGE(LOG_ERROR, "error restoring cublas");
             goto cleanup;
         }
+        break;
+    case rpc_cublasltcreate:
+        LOGE(LOG_ERROR, "no support for cubaslt restoration");
         break;
     default:
         int res = cr_call_record(record);

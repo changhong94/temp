@@ -81,7 +81,7 @@ int server_runtime_init(int restore)
         ret &= resource_mg_init(&rm_streams, 1);
         ret &= resource_mg_init(&rm_events, 1);
         ret &= resource_mg_init(&rm_arrays, 1);
-        ret &= resource_mg_init(&rm_memory, 1);
+        ret &= resource_memory_mg_init(&rm_memory, 1);
         ret &= cusolver_init(1, &rm_streams, &rm_memory);
         ret &= cublas_init(1, &rm_memory);
 	    ret &= cublaslt_init(1, &rm_memory);
@@ -89,7 +89,7 @@ int server_runtime_init(int restore)
         ret &= resource_mg_init(&rm_streams, 0);
         ret &= resource_mg_init(&rm_events, 0);
         ret &= resource_mg_init(&rm_arrays, 0);
-        ret &= resource_mg_init(&rm_memory, 0);
+        ret &= resource_memory_mg_init(&rm_memory, 0);
         ret &= resource_mg_init(&rm_kernels, 0);
         ret &= cusolver_init(0, &rm_streams, &rm_memory);
         ret &= cublas_init(0, &rm_memory);
@@ -867,7 +867,15 @@ bool_t cuda_launch_kernel_1_svc(ptr func, rpc_dim3 gridDim, rpc_dim3 blockDim,
         cuda_args[i] = args.mem_data_val+sizeof(size_t)+param_num*sizeof(uint16_t)+arg_offsets[i];
         *(void**)cuda_args[i] = resource_mg_get(&rm_memory, *(void**)cuda_args[i]);
         LOGE(LOG_DEBUG, "arg: %p (%d)", *(void**)cuda_args[i], *(int*)cuda_args[i]);
+        /**
+        struct cudaPointerAttributes attributes;
+        int res = cudaPointerGetAttributes (&attributes, *(void**)cuda_args[i]);
+        printf(" pointer attr return %d\n", res);
+        printf("Memory type for d_data %d\n", attributes.type);
+        printf("Memory type host %d, device %d\n", cudaMemoryTypeHost, cudaMemoryTypeDevice);
+        **/
     }
+    // printf("host func: %p\n", func);
 
     LOGE(LOG_DEBUG, "cudaLaunchKernel(func=%p, gridDim=[%d,%d,%d], blockDim=[%d,%d,%d], args=%p, sharedMem=%d, stream=%p)",
                     resource_mg_get(&rm_functions, (void*)func),
@@ -1228,6 +1236,8 @@ bool_t cuda_malloc_1_svc(size_t argp, ptr_result *result, struct svc_req *rqstp)
     RECORD_API(size_t);
     RECORD_SINGLE_ARG(argp);
     LOGE(LOG_DEBUG, "cudaMalloc(%d)", argp);
+    //LOGE(LOG_DEBUG, "cudaMalloc for ptr & %p\n", &result->ptr_result_u.ptr);
+    LOGE(LOG_DEBUG, "cudaMalloc for ptr %p\n", result->ptr_result_u.ptr);
 
 
 #ifdef WITH_IB
@@ -1241,7 +1251,10 @@ bool_t cuda_malloc_1_svc(size_t argp, ptr_result *result, struct svc_req *rqstp)
             }    
 #else
     result->err = cudaMalloc((void **)&result->ptr_result_u.ptr, argp);
-    resource_mg_create(&rm_memory, (void *)result->ptr_result_u.ptr);
+    //LOGE(LOG_DEBUG, "cudaMalloc after for ptr & %p\n", &result->ptr_result_u.ptr);
+    LOGE(LOG_DEBUG, "cudaMalloc after for ptr2 %p\n", result->ptr_result_u.ptr);
+    resource_memory_mg_create(&rm_memory, (void *)result->ptr_result_u.ptr, argp);
+    //resource_mg_create(&rm_memory, (void *)result->ptr_result_u.ptr, argp);
 #endif
 
     RECORD_RESULT(ptr_result_u, *result);
@@ -1264,7 +1277,7 @@ bool_t cuda_malloc_3d_1_svc(size_t depth, size_t height, size_t width, pptr_resu
     result->pptr_result_u.ptr.ptr = (ptr)pptr.ptr;
     result->pptr_result_u.ptr.xsize = pptr.xsize;
     result->pptr_result_u.ptr.ysize = pptr.ysize;
-    resource_mg_create(&rm_memory, pptr.ptr);
+    resource_memory_mg_create(&rm_memory, pptr.ptr, extent.depth * extent.height * extent.width);
 
     RECORD_RESULT(integer, result->err);
     return 1;
@@ -1329,7 +1342,7 @@ bool_t cuda_malloc_pitch_1_svc(size_t width, size_t height, ptrsz_result *result
     result->err = cudaMallocPitch((void*)&result->ptrsz_result_u.data.p,
                                   &result->ptrsz_result_u.data.s,
                                   width, height);
-    resource_mg_create(&rm_memory, (void*)result->ptrsz_result_u.data.p);
+    resource_memory_mg_create(&rm_memory, (void*)result->ptrsz_result_u.data.p, width * height);
 
     RECORD_RESULT(integer, result->err);
     return 1;

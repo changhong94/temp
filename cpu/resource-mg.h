@@ -21,7 +21,16 @@ typedef struct resource_mg_t {
     list new_res;
     int bypass;
 } resource_mg;
+typedef struct resource_memory_mg_map_elem_t {
+    void* client_address;
+    void* cuda_address;
+    size_t length;
+} resource_memory_mg_map_elem;
 
+typedef struct memory_node_t {
+    void* start_addr;
+    size_t length;
+} memory_node;
 
 //Runtime API RMs
 resource_mg rm_streams;
@@ -71,4 +80,8 @@ void* resource_mg_get(resource_mg *mg, void* client_address);
 
 void resource_mg_print(resource_mg *mg);
 
+int resource_memory_mg_init(resource_mg *mg, int bypass);
+int resource_memory_mg_create(resource_mg *mg, void* cuda_address, size_t length);
+void* resource_memory_mg_get(resource_mg *mg, void* client_address);
+int resource_memory_mg_add_sorted(resource_mg *mg, void* client_address, void* cuda_address, size_t mem_size);
 #endif //_RESOURCE_MG_H_
