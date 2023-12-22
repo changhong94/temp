@@ -1271,16 +1271,16 @@ static const size_t backendAttributeSizes[] = {
     [CUDNN_TYPE_BN_FINALIZE_STATS_MODE] = sizeof(cudnnBnFinalizeStatsMode_t),
     [CUDNN_TYPE_REDUCTION_OPERATOR_TYPE] = sizeof(cudnnReduceTensorOp_t),
     [CUDNN_TYPE_BEHAVIOR_NOTE] = sizeof(cudnnBackendBehaviorNote_t),
-    [CUDNN_TYPE_TENSOR_REORDERING_MODE] = sizeof(cudnnBackendTensorReordering_t),
-    [CUDNN_TYPE_RESAMPLE_MODE] = sizeof(cudnnResampleMode_t),
-    [CUDNN_TYPE_PADDING_MODE] = sizeof(cudnnPaddingMode_t),
-    [CUDNN_TYPE_INT32] = sizeof(int32_t),
-    [CUDNN_TYPE_CHAR] = sizeof(char),
-    [CUDNN_TYPE_SIGNAL_MODE] = sizeof(cudnnSignalMode_t),
-    [CUDNN_TYPE_FRACTION] = sizeof(cudnnFraction_t),
-    [CUDNN_TYPE_NORM_MODE] = sizeof(cudnnBackendNormMode_t),
-    [CUDNN_TYPE_NORM_FWD_PHASE] = sizeof(cudnnBackendNormFwdPhase_t),
-    [CUDNN_TYPE_RNG_DISTRIBUTION] = sizeof(cudnnRngDistribution_t),
+    // [CUDNN_TYPE_TENSOR_REORDERING_MODE] = sizeof(cudnnBackendTensorReordering_t),
+    // [CUDNN_TYPE_RESAMPLE_MODE] = sizeof(cudnnResampleMode_t),
+    // [CUDNN_TYPE_PADDING_MODE] = sizeof(cudnnPaddingMode_t),
+    // [CUDNN_TYPE_INT32] = sizeof(int32_t),
+    // [CUDNN_TYPE_CHAR] = sizeof(char),
+    // [CUDNN_TYPE_SIGNAL_MODE] = sizeof(cudnnSignalMode_t),
+    // [CUDNN_TYPE_FRACTION] = sizeof(cudnnFraction_t),
+    // [CUDNN_TYPE_NORM_MODE] = sizeof(cudnnBackendNormMode_t),
+    // [CUDNN_TYPE_NORM_FWD_PHASE] = sizeof(cudnnBackendNormFwdPhase_t),
+    // [CUDNN_TYPE_RNG_DISTRIBUTION] = sizeof(cudnnRngDistribution_t),
 };
 
 bool_t rpc_cudnnbackendcreatedescriptor_1_svc(int descriptorType, ptr_result *result, struct svc_req *rqstp)
@@ -1360,10 +1360,10 @@ bool_t rpc_cudnnbackendsetattribute_1_svc(
 
     LOGE(LOG_DEBUG, "%s", __FUNCTION__);
     
-    if (attributeType < 0 || attributeType >= CUDNN_TYPE_RNG_DISTRIBUTION) {
-        LOGE(LOG_ERROR, "attributeType out of range.");
-        return 0;
-    }
+    // if (attributeType < 0 || attributeType >= CUDNN_TYPE_RNG_DISTRIBUTION) {
+    //     LOGE(LOG_ERROR, "attributeType out of range.");
+    //     return 0;
+    // }
 
     if (arrayOfElements.mem_data_len != elementCount * backendAttributeSizes[attributeType]) {
         LOGE(LOG_ERROR, "array dimensions not as expected.");
@@ -1385,10 +1385,10 @@ bool_t rpc_cudnnbackendgetattribute_1_svc(ptr descriptor, int attributeName, int
 {
     void *arrayOfElements = NULL;
     LOGE(LOG_DEBUG, "%s", __FUNCTION__);
-    if (attributeType < 0 || attributeType >= CUDNN_TYPE_RNG_DISTRIBUTION) {
-        LOGE(LOG_ERROR, "attributeType out of range.");
-        return 0;
-    }
+    // if (attributeType < 0 || attributeType >= CUDNN_TYPE_RNG_DISTRIBUTION) {
+    //     LOGE(LOG_ERROR, "attributeType out of range.");
+    //     return 0;
+    // }
     result->mem_result_u.data.mem_data_len = sizeof(int64_t) + requestedElementCount* backendAttributeSizes[attributeType];
     result->mem_result_u.data.mem_data_val = malloc(result->mem_result_u.data.mem_data_len);
     if (result->mem_result_u.data.mem_data_val == NULL) {

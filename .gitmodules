@@ -1,7 +1,6 @@
 [submodule "submodules/libtirpc"]
 	path = submodules/libtirpc
-	url = https://rnd-gitlab-ca-g.huawei.com/ici/llm/inference-runtime/cheng_chen/libtirpc.git
-	branch = cchen
+	url = https://github.com/alisw/libtirpc
 [submodule "submodules/cuda-gdb"]
 	path = submodules/cuda-gdb
-	url = https://rnd-gitlab-ca-g.huawei.com/ici/llm/inference-runtime/cheng_chen/cuda-gdb.git
+	url = https://github.com/NVIDIA/cuda-gdb

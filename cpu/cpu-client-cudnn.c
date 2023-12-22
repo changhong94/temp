@@ -1783,16 +1783,16 @@ static const size_t backendAttributeSizes[] = {
     [CUDNN_TYPE_BN_FINALIZE_STATS_MODE] = sizeof(cudnnBnFinalizeStatsMode_t),
     [CUDNN_TYPE_REDUCTION_OPERATOR_TYPE] = sizeof(cudnnReduceTensorOp_t),
     [CUDNN_TYPE_BEHAVIOR_NOTE] = sizeof(cudnnBackendBehaviorNote_t),
-    [CUDNN_TYPE_TENSOR_REORDERING_MODE] = sizeof(cudnnBackendTensorReordering_t),
-    [CUDNN_TYPE_RESAMPLE_MODE] = sizeof(cudnnResampleMode_t),
-    [CUDNN_TYPE_PADDING_MODE] = sizeof(cudnnPaddingMode_t),
-    [CUDNN_TYPE_INT32] = sizeof(int32_t),
-    [CUDNN_TYPE_CHAR] = sizeof(char),
-    [CUDNN_TYPE_SIGNAL_MODE] = sizeof(cudnnSignalMode_t),
-    [CUDNN_TYPE_FRACTION] = sizeof(cudnnFraction_t),
-    [CUDNN_TYPE_NORM_MODE] = sizeof(cudnnBackendNormMode_t),
-    [CUDNN_TYPE_NORM_FWD_PHASE] = sizeof(cudnnBackendNormFwdPhase_t),
-    [CUDNN_TYPE_RNG_DISTRIBUTION] = sizeof(cudnnRngDistribution_t),
+    // [CUDNN_TYPE_TENSOR_REORDERING_MODE] = sizeof(cudnnBackendTensorReordering_t),
+    // [CUDNN_TYPE_RESAMPLE_MODE] = sizeof(cudnnResampleMode_t),
+    // [CUDNN_TYPE_PADDING_MODE] = sizeof(cudnnPaddingMode_t),
+    // [CUDNN_TYPE_INT32] = sizeof(int32_t),
+    // [CUDNN_TYPE_CHAR] = sizeof(char),
+    // [CUDNN_TYPE_SIGNAL_MODE] = sizeof(cudnnSignalMode_t),
+    // [CUDNN_TYPE_FRACTION] = sizeof(cudnnFraction_t),
+    // [CUDNN_TYPE_NORM_MODE] = sizeof(cudnnBackendNormMode_t),
+    // [CUDNN_TYPE_NORM_FWD_PHASE] = sizeof(cudnnBackendNormFwdPhase_t),
+    // [CUDNN_TYPE_RNG_DISTRIBUTION] = sizeof(cudnnRngDistribution_t),
 };
 cudnnStatus_t cudnnBackendSetAttribute(cudnnBackendDescriptor_t descriptor,
                          cudnnBackendAttributeName_t attributeName,
@@ -1805,10 +1805,10 @@ cudnnStatus_t cudnnBackendSetAttribute(cudnnBackendDescriptor_t descriptor,
 #endif //WITH_API_CNT
     int result;
     LOGE(LOG_DEBUG, "%s(%p, %d, %d, %ld, %p)", __FUNCTION__, descriptor, attributeName, attributeType, elementCount, arrayOfElements);
-    if (attributeType > CUDNN_TYPE_RNG_DISTRIBUTION) {
-        LOGE(LOG_ERROR, "%s failed (attributeType is too large %d)", __FUNCTION__, attributeType);
-        return CUDNN_STATUS_BAD_PARAM;
-    }
+    // if (attributeType > CUDNN_TYPE_RNG_DISTRIBUTION) {
+    //     LOGE(LOG_ERROR, "%s failed (attributeType is too large %d)", __FUNCTION__, attributeType);
+    //     return CUDNN_STATUS_BAD_PARAM;
+    // }
     mem_data data = {
         .mem_data_len = elementCount * backendAttributeSizes[attributeType],
         .mem_data_val = (char *)arrayOfElements

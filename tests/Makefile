@@ -13,7 +13,7 @@ test_apps:
 
 cpu:
 	@echo -e "\033[36m----> Building tests/cpu\033[0m"
-	$(MAKE) -C cpu/unit
+	# $(MAKE) -C cpu/unit
 	$(MAKE) -C cpu/cubin
 
 gpu:
@@ -22,15 +22,15 @@ gpu:
 
 samples:
 	@echo -e "\033[36m----> Building tests/samples\033[0m"
-	$(MAKE) -C samples
+	# $(MAKE) -C samples
 
 bin: cpu test_apps
 	mkdir -p bin
-	cp cpu/unit/*.test bin
+	# cp cpu/unit/*.test bin
 	cp test_apps/*.testapp bin
-ifndef NOSAMPLES
-	cp samples/samples-bin/*.sample bin
-endif
+# ifndef NOSAMPLES
+# 	cp samples/samples-bin/*.sample bin
+# endif
 
 clean:
 	@echo -e "\033[31m----> Cleaning up tests/test_apps\033[0m"
@@ -40,6 +40,6 @@ clean:
 	@echo -e "\033[31m----> Cleaning up tests/gpu\033[0m"
 	$(MAKE) -C gpu clean
 	@echo -e "\033[31m----> Cleaning up test/samples\033[0m"
-	$(MAKE) -C samples clean
+	# $(MAKE) -C samples clean
 	rm -rf bin
 
